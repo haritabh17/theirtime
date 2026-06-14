@@ -14,7 +14,7 @@
 
 <div align="center">
 
-![Teammate avatars and local times in the macOS menu bar](assets/theirtime-hero.png)
+![Avatars, names, and local times in the macOS menu bar and dropdown](assets/theirtime-hero.png)
 
 </div>
 
@@ -93,7 +93,7 @@ theirtime install-agents
 | `theirtime status` | Config, Keychain, and agent state |
 | `theirtime auth` | Re-authorize Slack |
 | `theirtime offboard` | Uninstall everything |
-| `theirtime menubar --demo` | Preview the menu bar without Slack |
+| `theirtime menubar --demo` | Preview menu bar with avatar, name, and 12h time (no Slack) |
 
 Logs · `~/Library/Logs/theirtime/menubar.log`
 

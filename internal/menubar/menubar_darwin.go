@@ -33,7 +33,7 @@ func Run() error {
 	return run(false)
 }
 
-// RunDemo starts the menu bar with bundled cartoon avatars for screenshots.
+// RunDemo starts the menu bar with bundled demo avatars and all display fields (avatar, name, 12h time).
 func RunDemo() error {
 	return run(true)
 }

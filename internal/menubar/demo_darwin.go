@@ -7,6 +7,7 @@ import (
 
 	"github.com/haritabh17/theirtime/internal/config"
 	"github.com/haritabh17/theirtime/internal/team"
+	"github.com/haritabh17/theirtime/internal/timeformat"
 )
 
 //go:embed demo/bob.png
@@ -26,6 +27,15 @@ func demoConfig() *config.Config {
 		cfg = &config.Config{}
 	}
 	config.ApplyDefaults(cfg)
+
+	// Demo always showcases every display field regardless of saved prefs.
+	showAvatar, showName, showTime := true, true, true
+	cfg.ShowAvatar = &showAvatar
+	cfg.ShowName = &showName
+	cfg.ShowTime = &showTime
+	cfg.Format24h = false
+	cfg.TimePrecision = timeformat.PrecisionMinutes
+
 	return cfg
 }
 

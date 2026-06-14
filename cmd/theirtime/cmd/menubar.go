@@ -15,5 +15,5 @@ var menubarCmd = &cobra.Command{
 }
 
 func init() {
-	menubarCmd.Flags().BoolVar(&menubarDemo, "demo", false, "Preview menu bar with bundled cartoon avatars (no Slack; for screenshots)")
+	menubarCmd.Flags().BoolVar(&menubarDemo, "demo", false, "Preview menu bar with all display fields (avatar, name, 12h time; no Slack)")
 }

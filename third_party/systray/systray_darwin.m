@@ -13,6 +13,8 @@
 
 #endif
 
+static NSImage* scaledIconFromData(NSData *buffer, CGFloat size, bool template);
+
 @interface MenuItem : NSObject
 {
   @public
@@ -105,9 +107,8 @@ withParentMenuId: (int)theParentMenuId
     NSString *text = seg[@"text"];
 
     if (imgData != nil && [imgData length] > 0) {
-      NSImage *img = [[NSImage alloc] initWithData:imgData];
+      NSImage *img = scaledIconFromData(imgData, imgSize, false);
       if (img != nil) {
-        [img setSize:NSMakeSize(imgSize, imgSize)];
         NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
         attachment.image = img;
         attachment.bounds = NSMakeRect(0, imgBaseline, imgSize, imgSize);
@@ -274,19 +275,41 @@ void runInMainThread(SEL method, id object) {
                   waitUntilDone: YES];
 }
 
-void setIcon(const char* iconBytes, int length, bool template) {
-  NSData* buffer = [NSData dataWithBytes: iconBytes length:length];
-  NSImage *image = [[NSImage alloc] initWithData:buffer];
-  [image setSize:NSMakeSize(16, 16)];
+static NSImage* scaledIconFromData(NSData *buffer, CGFloat size, bool template) {
+  if (buffer == nil || [buffer length] == 0) {
+    return nil;
+  }
+  NSImage *source = [[NSImage alloc] initWithData:buffer];
+  if (source == nil) {
+    return nil;
+  }
+  NSImage *image = [[NSImage alloc] initWithSize:NSMakeSize(size, size)];
+  [image lockFocus];
+  [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationHigh];
+  NSRect dest = NSMakeRect(0, 0, size, size);
+  [source drawInRect:dest fromRect:NSZeroRect operation:NSCompositingOperationSourceOver fraction:1.0 respectFlipped:YES hints:nil];
+  [image unlockFocus];
   image.template = template;
+  return image;
+}
+
+static NSImage* scaledIconFromBytes(const char* iconBytes, int length, CGFloat size, bool template) {
+  return scaledIconFromData([NSData dataWithBytes:iconBytes length:length], size, template);
+}
+
+void setIcon(const char* iconBytes, int length, bool template) {
+  NSImage *image = scaledIconFromBytes(iconBytes, length, 16.0, template);
+  if (image == nil) {
+    return;
+  }
   runInMainThread(@selector(setIcon:), (id)image);
 }
 
 void setMenuItemIcon(const char* iconBytes, int length, int menuId, bool template) {
-  NSData* buffer = [NSData dataWithBytes: iconBytes length:length];
-  NSImage *image = [[NSImage alloc] initWithData:buffer];
-  [image setSize:NSMakeSize(16, 16)];
-  image.template = template;
+  NSImage *image = scaledIconFromBytes(iconBytes, length, 18.0, template);
+  if (image == nil) {
+    return;
+  }
   NSNumber *mId = [NSNumber numberWithInt:menuId];
   runInMainThread(@selector(setMenuItemIcon:), @[image, (id)mId]);
 }
