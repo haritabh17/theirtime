@@ -1,11 +1,15 @@
-<p align="center">
-  <span style="font-size: 2.4em; font-weight: 650; letter-spacing: -0.03em;">their<span style="color: #2997ff;">time</span></span><br>
-  <span style="font-size: 0.72em; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.55;">Teammate clocks · macOS menu bar</span>
-</p>
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/lockup/theirtime-lockup-dark.png">
+  <img src="assets/brand/lockup/theirtime-lockup-light.png" alt="theirtime — your hour in white, their hour in amber">
+</picture>
+
+</div>
 
 <p align="center">
   <em>Stop opening Slack profiles to guess if it's a reasonable hour.</em><br>
-  Teammate clocks and avatars in your menu bar — your Slack app, your Keychain, no server.
+  Your hour in white · their hour in amber — Slack avatars in your menu bar, no server.
 </p>
 
 <div align="center">
@@ -15,11 +19,11 @@
 </div>
 
 <p align="center">
-  <a href="https://github.com/haritabh17/theirtime/releases"><img src="https://img.shields.io/github/v/release/haritabh17/theirtime?style=flat-square&label=release&color=111111&labelColor=111111" alt="Release"></a>
+  <a href="https://github.com/haritabh17/theirtime/releases"><img src="https://img.shields.io/github/v/release/haritabh17/theirtime?style=flat-square&label=release&color=0d9488&labelColor=0d9488" alt="Release"></a>
   &nbsp;
-  <a href="#"><img src="https://img.shields.io/badge/macOS-only-111111?style=flat-square&logo=apple&logoColor=white" alt="macOS"></a>
+  <a href="#"><img src="https://img.shields.io/badge/macOS-only-0d9488?style=flat-square&logo=apple&logoColor=white" alt="macOS"></a>
   &nbsp;
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-0d9488?style=flat-square" alt="MIT"></a>
 </p>
 
 ## Quick start
