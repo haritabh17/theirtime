@@ -28,21 +28,46 @@
 
 ## Quick start
 
+**1. Install**
+
 ```bash
-curl -fsSL https://raw.githubusercontent.com/haritabh17/theirtime/main/scripts/install.sh | bash
+curl -fsSL \
+  https://raw.githubusercontent.com/haritabh17/theirtime/main/scripts/install.sh \
+  | bash
+```
+
+macOS only · installs `theirtime` to `/usr/local/bin`
+
+**2. Connect Slack** — your app, your Keychain
+
+```bash
 theirtime onboard
+```
+
+Opens a pre-filled Slack app manifest, then OAuth.
+
+**3. Add a teammate**
+
+```bash
 theirtime team add bob U012ABCDEF
+```
+
+> **Member ID:** Slack profile → **⋮** → *Copy member ID* (`U012ABCDEF`)
+
+**4. Start the menu bar**
+
+```bash
 theirtime install-agents
 ```
 
-| | |
-|:--|:--|
-| **Member ID** | Slack profile → **⋮** → *Copy member ID* (`U…`) |
-| **Updates** | Menu bar every minute · Slack avatars every 15 minutes |
+Registers LaunchAgents so the menu bar runs when your team list isn't empty.
+
+Run `theirtime status` to confirm everything's wired up.
 
 ## Display
 
-> Default: **`[avatar] 4.07 PM`** in the menu bar — turn names on with `show_name true`.
+> Default: **`[avatar] 4.07 PM`** in the menu bar — turn names on with `show_name true`.  
+> Menu bar refreshes every minute · Slack avatars every 15 minutes.
 
 ```bash
 theirtime config set show_name true
