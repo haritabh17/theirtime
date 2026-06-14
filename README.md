@@ -1,75 +1,79 @@
-# theirtime
+<p align="center">
+  <span style="font-size: 2.4em; font-weight: 650; letter-spacing: -0.03em;">their<span style="color: #2997ff;">time</span></span><br>
+  <span style="font-size: 0.72em; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.55;">Teammate clocks · macOS menu bar</span>
+</p>
 
-![theirtime in the macOS menu bar — teammate avatars, local times, and dropdown with timezones](assets/theirtime-screenshot.png)
+<p align="center">
+  <em>Stop opening Slack profiles to guess if it's a reasonable hour.</em><br>
+  Teammate clocks and avatars in your menu bar — your Slack app, your Keychain, no server.
+</p>
 
-Their local time. Right in your menu bar.
+<div align="center">
 
-If you work across timezones, you end up checking profiles or doing mental math before you message someone. **theirtime** shows coworkers' current local times in your **macOS menu bar**, with their Slack profile pictures beside each clock. Open the menu for timezone detail.
+![Teammate avatars and local times in the macOS menu bar](assets/theirtime-hero.png)
 
-By default the menu bar shows **avatar + time only** (no name labels). You can change what's visible and how time is formatted — see [Config](#config).
+</div>
 
-There's no theirtime server or account. You create your own Slack app; credentials stay in your Keychain. macOS only.
+<p align="center">
+  <a href="https://github.com/haritabh17/theirtime/releases"><img src="https://img.shields.io/github/v/release/haritabh17/theirtime?style=flat-square&label=release&color=111111&labelColor=111111" alt="Release"></a>
+  &nbsp;
+  <a href="#"><img src="https://img.shields.io/badge/macOS-only-111111?style=flat-square&logo=apple&logoColor=white" alt="macOS"></a>
+  &nbsp;
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111111?style=flat-square" alt="MIT"></a>
+</p>
 
-## Install
+## Quick start
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/haritabh17/theirtime/main/scripts/install.sh | bash
 theirtime onboard
+theirtime team add bob U012ABCDEF
+theirtime install-agents
 ```
 
-`onboard` opens a pre-filled Slack app manifest, then walks you through OAuth.
+| | |
+|:--|:--|
+| **Member ID** | Slack profile → **⋮** → *Copy member ID* (`U…`) |
+| **Updates** | Menu bar every minute · Slack avatars every 15 minutes |
+
+## Display
+
+> Default: **`[avatar] 4.07 PM`** in the menu bar — turn names on with `show_name true`.
 
 ```bash
-theirtime team add bob U012ABCDEF    # label + Slack member ID (profile → ⋮ → Copy member ID)
-theirtime install-agents             # starts menu bar when team is non-empty
-theirtime status                     # is it running?
-theirtime auth                       # re-authorize after a token revoke
-theirtime offboard                   # uninstall everything
+theirtime config set show_name true
+theirtime config set format_24h true
+theirtime config set time_precision hours
+theirtime install-agents
 ```
 
-Times come from each person's **Slack profile timezone**. The menu bar clock updates every minute; Slack profiles (timezone and avatar) refresh every 15 minutes.
+| You want | Set |
+|:--|:--|
+| Names in the bar | `show_name true` |
+| 24-hour clock | `format_24h true` |
+| Hour only (`4 PM`) | `time_precision hours` |
+| Avatar + name + time | `show_avatar true` · `show_name true` · `show_time true` |
 
-Logs: `~/Library/Logs/theirtime/menubar.log`
+`theirtime config get` · `theirtime config set show_avatar|show_name|show_time|format_24h|time_precision …`
 
-## Config
+## Commands
 
-Control what appears per teammate and how time is formatted (same prefs for menu bar title and dropdown):
+| Command | Purpose |
+|:--|:--|
+| `theirtime team list` · `team remove <label>` | Manage watched teammates |
+| `theirtime status` | Config, Keychain, and agent state |
+| `theirtime auth` | Re-authorize Slack |
+| `theirtime offboard` | Uninstall everything |
+| `theirtime menubar --demo` | Preview the menu bar without Slack |
+
+Logs · `~/Library/Logs/theirtime/menubar.log`
+
+## Privacy & develop
+
+Keychain for secrets · `~/Library/Application Support/theirtime/config.yaml` for prefs · OAuth on `127.0.0.1:8765` only · no telemetry.
 
 ```bash
-theirtime config set show_avatar true    # default: true
-theirtime config set show_name false     # default: false — set true to show labels
-theirtime config set show_time true      # default: true
-theirtime config set format_24h false    # 12h vs 24h clock
-theirtime config set time_precision minutes   # or hours (e.g. 4.07 PM vs 4 PM)
-theirtime config get
+make build && ./bin/theirtime menubar --demo
 ```
 
-| show_avatar | show_name | show_time | Menu bar example |
-|-------------|-----------|-----------|------------------|
-| true | false | true | `[img] 4.07 PM` **(default)** |
-| true | true | true | `[img] bob - 4.07 PM` |
-| false | true | true | `bob - 4.07 PM` |
-| true | false | false | `[img]` only |
-
-After changing display settings, restart the menu bar agent: `theirtime install-agents`.
-
-## Team commands
-
-```bash
-theirtime team add <label> <U…>
-theirtime team list
-theirtime team remove <label>
-```
-
-## Privacy
-
-Credentials and OAuth tokens go in Keychain. Preferences (no secrets) live in `~/Library/Application Support/theirtime/config.yaml`. The OAuth callback listens on `127.0.0.1:8765` only. No telemetry.
-
-## Developing
-
-- Manifest: [`manifest/theirtime.manifest.yaml`](manifest/theirtime.manifest.yaml)
-- Tag `v*` → GoReleaser binary on [GitHub Releases](https://github.com/haritabh17/theirtime/releases)
-- [CLI build plan](docs/PLAN-cli.md)
-- `theirtime menubar --demo` — preview menu bar UI with bundled cartoon avatars (no Slack; useful for docs/screenshots)
-
-Dev env vars: see [`.env.example`](.env.example).
+[`manifest/theirtime.manifest.yaml`](manifest/theirtime.manifest.yaml) · [Releases](https://github.com/haritabh17/theirtime/releases) · [CLI plan](docs/PLAN-cli.md)
