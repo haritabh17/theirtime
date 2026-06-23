@@ -92,7 +92,10 @@ func writeMenubarPlist(binaryPath, logs string) error {
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
-  <true/>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
   <key>LSAppNapIsDisabled</key>
   <true/>
   <key>StandardOutPath</key>
