@@ -1,16 +1,37 @@
 package team
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/haritabh17/theirtime/internal/config"
+	"github.com/haritabh17/theirtime/internal/slack"
 )
 
 func defaultCfg() *config.Config {
 	c := &config.Config{}
 	config.ApplyDefaults(c)
 	return c
+}
+
+type fakeInfoPresenceClient struct {
+	info        slack.UserInfo
+	presence    slack.Presence
+	presenceErr error
+}
+
+func (c fakeInfoPresenceClient) GetUserInfo(userID string) (slack.UserInfo, error) {
+	info := c.info
+	info.ID = userID
+	return info, nil
+}
+
+func (c fakeInfoPresenceClient) GetUserPresence(userID string) (slack.Presence, error) {
+	if c.presenceErr != nil {
+		return "", c.presenceErr
+	}
+	return c.presence, nil
 }
 
 func TestFormatMenubarTitleDefault(t *testing.T) {
@@ -23,6 +44,60 @@ func TestFormatMenubarTitleDefault(t *testing.T) {
 	want := "10.46 AM | 3.15 PM"
 	if got != want {
 		t.Fatalf("got %q want %q", got, want)
+	}
+}
+
+func TestListWithTimesPopulatesPresence(t *testing.T) {
+	cfg := defaultCfg()
+	cfg.Team = []config.TeamMember{{Label: "sugu", ID: "U12345678"}}
+	client := fakeInfoPresenceClient{
+		info: slack.UserInfo{
+			DisplayName: "Sugu",
+			TZ:          "America/Los_Angeles",
+			AvatarURL:   "https://example.com/avatar.png",
+		},
+		presence: slack.PresenceActive,
+	}
+
+	got, err := ListWithTimes(client, cfg, time.Date(2026, 6, 23, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d members want 1", len(got))
+	}
+	if got[0].Presence != slack.PresenceActive {
+		t.Fatalf("presence got %q want %q", got[0].Presence, slack.PresenceActive)
+	}
+	if got[0].AvatarURL == "" || got[0].Time == "" || got[0].Time == "—" {
+		t.Fatalf("expected profile and time fields to be populated: %#v", got[0])
+	}
+}
+
+func TestListWithTimesIgnoresPresenceError(t *testing.T) {
+	cfg := defaultCfg()
+	cfg.Team = []config.TeamMember{{Label: "sugu", ID: "U12345678"}}
+	client := fakeInfoPresenceClient{
+		info: slack.UserInfo{
+			DisplayName: "Sugu",
+			TZ:          "America/Los_Angeles",
+			AvatarURL:   "https://example.com/avatar.png",
+		},
+		presenceErr: errors.New("missing scope"),
+	}
+
+	got, err := ListWithTimes(client, cfg, time.Date(2026, 6, 23, 12, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("got %d members want 1", len(got))
+	}
+	if got[0].Presence != "" {
+		t.Fatalf("presence got %q want empty", got[0].Presence)
+	}
+	if got[0].AvatarURL == "" || got[0].Time == "" || got[0].Time == "—" {
+		t.Fatalf("presence error should not drop profile or time fields: %#v", got[0])
 	}
 }
 

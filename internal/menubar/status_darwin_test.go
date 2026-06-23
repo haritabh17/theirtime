@@ -39,9 +39,11 @@ func TestBuildMenubarSegmentsGroupsAvatarsBeforeSharedTime(t *testing.T) {
 	assertImageSegment(t, segments[0], []byte("avatar-1"), 48, config.IconSize(cfg))
 	assertImageSegment(t, segments[1], []byte("avatar-2"), 48, config.IconSize(cfg))
 	assertTextSegment(t, segments[2], "10.46 AM")
-	assertTextSegment(t, segments[3], " | ")
+	assertWidthText(t, segments[2], "12.59 PM")
+	assertTextSegment(t, segments[3], groupSeparator)
 	assertImageSegment(t, segments[4], []byte("avatar-3"), 48, config.IconSize(cfg))
 	assertTextSegment(t, segments[5], "1.46 PM")
+	assertWidthText(t, segments[5], "12.59 PM")
 }
 
 func TestBuildMenubarSegmentsUsesGroupedNamesWhenEnabled(t *testing.T) {
@@ -59,6 +61,23 @@ func TestBuildMenubarSegmentsUsesGroupedNamesWhenEnabled(t *testing.T) {
 		t.Fatalf("got %d segments want 1: %#v", len(segments), segments)
 	}
 	assertTextSegment(t, segments[0], "sugu, rafa - 10.46 AM")
+	assertWidthText(t, segments[0], "sugu, rafa - 12.59 PM")
+}
+
+func TestBuildMenubarSegmentsReserves24HourTimeWidth(t *testing.T) {
+	cfg := defaultStatusCfg()
+	cfg.Format24h = true
+	at := time.Date(2026, 6, 23, 12, 0, 0, 0, time.UTC)
+	members := []team.MemberTime{
+		{ID: "u1", Label: "sugu", TZ: "America/Los_Angeles", Time: "6.02"},
+	}
+
+	segments := buildMenubarSegmentsAt(cfg, members, nil, at)
+	if len(segments) != 1 {
+		t.Fatalf("got %d segments want 1: %#v", len(segments), segments)
+	}
+	assertTextSegment(t, segments[0], "6.02")
+	assertWidthText(t, segments[0], "23.59")
 }
 
 func TestBuildMenubarSegmentsGroupsSameCurrentOffset(t *testing.T) {
@@ -105,10 +124,10 @@ func TestBuildMenubarSegmentsSortsGroupsByUTCOffset(t *testing.T) {
 	}
 	assertImageSegment(t, segments[0], []byte("avatar-la"), 0, config.IconSize(cfg))
 	assertTextSegment(t, segments[1], "6.02 AM")
-	assertTextSegment(t, segments[2], " | ")
+	assertTextSegment(t, segments[2], groupSeparator)
 	assertImageSegment(t, segments[3], []byte("avatar-ny"), 0, config.IconSize(cfg))
 	assertTextSegment(t, segments[4], "9.02 AM")
-	assertTextSegment(t, segments[5], " | ")
+	assertTextSegment(t, segments[5], groupSeparator)
 	assertImageSegment(t, segments[6], []byte("avatar-in"), 0, config.IconSize(cfg))
 	assertTextSegment(t, segments[7], "6.32 PM")
 }
@@ -179,5 +198,12 @@ func assertTextSegment(t *testing.T, got systray.StatusSegment, want string) {
 	}
 	if got.DisplaySize != 0 {
 		t.Fatalf("text segment display size got %d want 0", got.DisplaySize)
+	}
+}
+
+func assertWidthText(t *testing.T, got systray.StatusSegment, want string) {
+	t.Helper()
+	if got.WidthText != want {
+		t.Fatalf("width text got %q want %q", got.WidthText, want)
 	}
 }

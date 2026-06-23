@@ -88,11 +88,13 @@ withParentMenuId: (int)theParentMenuId
 }
 
 - (void)setIcon:(NSImage *)image {
+  statusItem.length = NSVariableStatusItemLength;
   statusItem.button.image = image;
   [self updateTitleButtonStyle];
 }
 
 - (void)setTitle:(NSString *)title {
+  statusItem.length = NSVariableStatusItemLength;
   statusItem.button.attributedTitle = [[NSAttributedString alloc] init];
   statusItem.button.title = title;
   [self updateTitleButtonStyle];
@@ -104,12 +106,17 @@ withParentMenuId: (int)theParentMenuId
     font = [NSFont systemFontOfSize:13];
   }
   NSMutableAttributedString *result = [[NSMutableAttributedString alloc] init];
+  NSMutableAttributedString *widthResult = [[NSMutableAttributedString alloc] init];
   NSDictionary *textAttrs = @{NSFontAttributeName: font};
   const CGFloat defaultImgSize = 30.0;
+  const CGFloat statusEdgeInset = 8.0;
+  NSString *imageGap = @" ";
+  BOOL firstAttachment = YES;
 
   for (NSDictionary *seg in segments) {
     NSData *imgData = seg[@"image"];
     NSString *text = seg[@"text"];
+    NSString *widthText = seg[@"widthText"];
 
     if (imgData != nil && [imgData length] > 0) {
       int avatarPx = 0;
@@ -130,20 +137,35 @@ withParentMenuId: (int)theParentMenuId
         if (img.size.height > 0 && img.size.width > 0) {
           boundW = boundH * (img.size.width / img.size.height);
         }
-        attachment.bounds = NSMakeRect(0, imgBaseline, boundW, boundH);
+        CGFloat attachmentX = firstAttachment ? -statusEdgeInset : 0.0;
+        attachment.bounds = NSMakeRect(attachmentX, imgBaseline, boundW, boundH);
         NSAttributedString *imgStr = [NSAttributedString attributedStringWithAttachment:attachment];
         [result appendAttributedString:imgStr];
-        [result appendAttributedString:[[NSAttributedString alloc] initWithString:@" " attributes:textAttrs]];
+        [result appendAttributedString:[[NSAttributedString alloc] initWithString:imageGap attributes:textAttrs]];
+        [widthResult appendAttributedString:imgStr];
+        [widthResult appendAttributedString:[[NSAttributedString alloc] initWithString:imageGap attributes:textAttrs]];
+        firstAttachment = NO;
       }
     }
 
     if (text != nil && [text length] > 0) {
       [result appendAttributedString:[[NSAttributedString alloc] initWithString:text attributes:textAttrs]];
+      NSString *measureText = widthText;
+      if (measureText == nil || [measureText length] == 0) {
+        measureText = text;
+      }
+      [widthResult appendAttributedString:[[NSAttributedString alloc] initWithString:measureText attributes:textAttrs]];
     }
   }
 
   statusItem.button.image = nil;
   statusItem.button.title = @"";
+  if ([widthResult length] > 0) {
+    CGFloat visibleWidth = ceil([result size].width);
+    CGFloat reservedWidth = ceil([widthResult size].width) - (statusEdgeInset * 2.0);
+    statusItem.length = MAX(visibleWidth, reservedWidth);
+  }
+  statusItem.button.alignment = NSTextAlignmentLeft;
   statusItem.button.attributedTitle = result;
   statusItem.button.imagePosition = NSNoImage;
 }
@@ -508,6 +530,12 @@ void setStatusSegments(status_segment_t* segments, int count) {
       NSString *text = [[NSString alloc] initWithUTF8String:segments[i].text];
       if (text != nil) {
         d[@"text"] = text;
+      }
+    }
+    if (segments[i].width_text != NULL) {
+      NSString *widthText = [[NSString alloc] initWithUTF8String:segments[i].width_text];
+      if (widthText != nil) {
+        d[@"widthText"] = widthText;
       }
     }
     if (segments[i].image_len > 0 && segments[i].image_bytes != NULL) {

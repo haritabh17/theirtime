@@ -6,27 +6,21 @@ import (
 	"image/color"
 	"image/draw"
 	_ "image/jpeg"
-	"math"
+	"image/png"
 
-	"github.com/fogleman/gg"
 	"github.com/haritabh17/theirtime/internal/slack"
 )
 
-const badgeRadiusRatio = 0.27
-
-// avatarEntry holds display-ready avatar bytes and the original square avatar
-// size before badge padding, used so the menu bar scales the face to full size.
+// avatarEntry holds display-ready avatar bytes and the original avatar size,
+// used so the menu bar scales the face to the configured display size.
 type avatarEntry struct {
 	data        []byte
 	contentSize int
 }
 
 var (
-	colorSlackGreen     = color.RGBA{R: 0x2B, G: 0xAC, B: 0x76, A: 0xFF}
-	colorActiveHighlight = color.RGBA{R: 0x4C, G: 0xD6, B: 0x94, A: 0xFF}
-	colorActiveShadow    = color.RGBA{R: 0x1A, G: 0x7A, B: 0x52, A: 0xFF}
-	colorAwayLight       = color.RGBA{R: 0x9A, G: 0x9A, B: 0x9A, A: 0xFF}
-	colorAwayDark        = color.RGBA{R: 0x4A, G: 0x4A, B: 0x4A, A: 0xFF}
+	colorSlackGreen = color.RGBA{R: 0x2B, G: 0xAC, B: 0x76, A: 0xFF}
+	colorAwayBar    = color.RGBA{R: 0xFF, G: 0xFF, B: 0xFF, A: 0xFF}
 )
 
 func applyPresenceBadge(avatarPNG []byte, presence slack.Presence) ([]byte, error) {
@@ -42,88 +36,80 @@ func applyPresenceBadge(avatarPNG []byte, presence slack.Presence) ([]byte, erro
 	}
 
 	bounds := src.Bounds()
-	size := bounds.Dx()
-	if size <= 0 {
+	width := bounds.Dx()
+	height := bounds.Dy()
+	if width <= 0 || height <= 0 {
 		return avatarPNG, nil
 	}
 
-	pad := badgeOverflowPadding(size)
-	canvas := image.NewRGBA(image.Rect(0, 0, size+pad, size+pad))
-	draw.Draw(canvas, image.Rect(0, 0, size, size), src, bounds.Min, draw.Src)
-
-	dc := gg.NewContextForImage(canvas)
-	drawPresenceBadge(dc, size, presence)
+	canvas := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(canvas, canvas.Bounds(), src, bounds.Min, draw.Src)
+	drawPresenceBar(canvas, presence)
 
 	var out bytes.Buffer
-	if err := dc.EncodePNG(&out); err != nil {
+	if err := png.Encode(&out, canvas); err != nil {
 		return nil, err
 	}
 	return out.Bytes(), nil
 }
 
-func badgeGeometry(size int) (cx, cy, r float64) {
-	cx = float64(size)
-	cy = float64(size)
-	r = float64(size) * badgeRadiusRatio
-	return cx, cy, r
-}
+func drawPresenceBar(img draw.Image, presence slack.Presence) {
+	bounds := img.Bounds()
+	thickness := presenceBarThickness(bounds.Dx())
+	if thickness == 0 {
+		return
+	}
+	radius := thickness / 2
+	if radius == 0 {
+		radius = 1
+	}
+	barRight := bounds.Min.X + thickness
+	centerX := bounds.Min.X + radius
+	topCenterY := bounds.Min.Y + radius
+	bottomCenterY := bounds.Max.Y - radius - 1
+	barColor := presenceBarColor(presence)
 
-// badgeOverflowPadding is extra transparent space on the right and bottom so the
-// full badge circle can extend past the avatar square without clipping.
-func badgeOverflowPadding(size int) int {
-	_, _, r := badgeGeometry(size)
-	// Shadow (r+1) + offset (1) + white ring (2px) beyond radius r.
-	return int(math.Ceil(r + 4))
-}
-
-func drawPresenceBadge(dc *gg.Context, size int, presence slack.Presence) {
-	cx, cy, r := badgeGeometry(size)
-
-	dc.SetRGBA(0, 0, 0, 0.25)
-	dc.DrawCircle(cx+1, cy+1, r+1)
-	dc.Fill()
-
-	dc.SetLineWidth(2)
-	dc.SetColor(color.White)
-	dc.DrawCircle(cx, cy, r+1)
-	dc.Stroke()
-
-	switch presence {
-	case slack.PresenceActive:
-		drawActiveBadge(dc, cx, cy, r)
-	case slack.PresenceAway:
-		drawAwayBadge(dc, cx, cy, r)
+	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
+		for x := bounds.Min.X; x < barRight; x++ {
+			if insidePresenceBar(x, y, radius, centerX, topCenterY, bottomCenterY) {
+				img.Set(x, y, barColor)
+			}
+		}
 	}
 }
 
-func drawActiveBadge(dc *gg.Context, cx, cy, r float64) {
-	hx := cx - r*0.35
-	hy := cy - r*0.35
-	grad := gg.NewRadialGradient(hx, hy, 0, cx, cy, r)
-	grad.AddColorStop(0, colorActiveHighlight)
-	grad.AddColorStop(0.55, colorSlackGreen)
-	grad.AddColorStop(1, colorActiveShadow)
-	dc.SetFillStyle(grad)
-	dc.DrawCircle(cx, cy, r)
-	dc.Fill()
-
-	dc.SetRGBA(1, 1, 1, 0.7)
-	dc.DrawCircle(cx-r*0.35, cy-r*0.35, r*0.22)
-	dc.Fill()
+func insidePresenceBar(x, y int, radius, centerX, topCenterY, bottomCenterY int) bool {
+	if y >= topCenterY && y <= bottomCenterY {
+		return true
+	}
+	cy := topCenterY
+	if y > bottomCenterY {
+		cy = bottomCenterY
+	}
+	dx := x - centerX
+	dy := y - cy
+	return dx*dx+dy*dy <= radius*radius
 }
 
-func drawAwayBadge(dc *gg.Context, cx, cy, r float64) {
-	grad := gg.NewRadialGradient(cx-r*0.3, cy-r*0.3, 0, cx, cy, r)
-	grad.AddColorStop(0, colorAwayLight)
-	grad.AddColorStop(0.7, color.RGBA{R: 0x6B, G: 0x6B, B: 0x6B, A: 0xFF})
-	grad.AddColorStop(1, colorAwayDark)
-	dc.SetFillStyle(grad)
-	dc.DrawCircle(cx, cy, r)
-	dc.Fill()
+func presenceBarThickness(width int) int {
+	if width <= 0 {
+		return 0
+	}
+	thickness := width / 8
+	if thickness < 3 {
+		thickness = 3
+	}
+	if thickness > width {
+		return width
+	}
+	return thickness
+}
 
-	dc.SetColor(color.White)
-	dc.DrawCircle(cx, cy, r*0.55)
-	dc.Fill()
+func presenceBarColor(presence slack.Presence) color.Color {
+	if presence == slack.PresenceActive {
+		return colorSlackGreen
+	}
+	return colorAwayBar
 }
 
 func imageSquareSize(raw []byte) int {

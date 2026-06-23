@@ -18,7 +18,7 @@ import (
 const (
 	OAuthPort       = 8765
 	RedirectPath    = "/callback"
-	UserScope       = "users:read"
+	UserScope       = "users:read,users:read.presence"
 	callbackTimeout = 5 * time.Minute
 )
 

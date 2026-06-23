@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/haritabh17/theirtime/internal/slack"
+	"github.com/haritabh17/theirtime/internal/team"
 )
 
 var testBackground = color.RGBA{R: 100, G: 120, B: 140, A: 255}
@@ -102,13 +103,14 @@ func TestApplyPresenceBadgeActiveDiffersFromAway(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	corner := pixel(activeImg, 45, 45)
-	if corner.G <= corner.R || corner.G <= corner.B {
-		t.Fatalf("active badge near corner should be green-dominant, got %#v", corner)
+	b := activeImg.Bounds()
+	left := pixel(activeImg, 0, b.Dy()/2)
+	if left.G <= left.R || left.G <= left.B {
+		t.Fatalf("active presence bar should be green-dominant, got %#v", left)
 	}
 }
 
-func TestBadgeOverflowsCorner(t *testing.T) {
+func TestPresenceBarKeepsAvatarDimensions(t *testing.T) {
 	raw := solidPNG(48, testBackground)
 	badged, err := applyPresenceBadge(raw, slack.PresenceActive)
 	if err != nil {
@@ -120,40 +122,55 @@ func TestBadgeOverflowsCorner(t *testing.T) {
 	}
 
 	b := img.Bounds()
-	if b.Dx() <= 48 || b.Dy() <= 48 {
-		t.Fatalf("badged image should be larger than avatar, got %dx%d", b.Dx(), b.Dy())
+	if b.Dx() != 48 || b.Dy() != 48 {
+		t.Fatalf("badged image should keep avatar size, got %dx%d", b.Dx(), b.Dy())
 	}
 
-	// Avatar unchanged in top-left.
 	if !isBackground(pixel(img, 0, 0)) {
 		t.Fatal("avatar top-left should be unchanged")
 	}
-
-	// Badge extends past original avatar edge into padding (full circle, not clipped).
-	if isBackground(pixel(img, 55, 48)) {
-		t.Fatal("expected badge pixels in right padding beyond avatar edge")
-	}
-	if isBackground(pixel(img, 48, 55)) {
-		t.Fatal("expected badge pixels in bottom padding beyond avatar edge")
+	if !isBackground(pixel(img, 24, 24)) {
+		t.Fatal("avatar middle should be unchanged")
 	}
 
-	// A point in the overflow padding (outside the 48×48 avatar) should show badge color.
-	overflowPixel := pixel(img, 58, 52)
-	if overflowPixel.A == 0 {
-		t.Fatal("badge should render in overflow padding, not be clipped")
+	barPixel := pixel(img, 0, 24)
+	if barPixel.G <= barPixel.R || barPixel.G <= barPixel.B {
+		t.Fatalf("left bar should be green-dominant, got %#v", barPixel)
+	}
+	if !isBackground(pixel(img, 0, 0)) {
+		t.Fatal("rounded bar should leave top-left corner unchanged")
+	}
+	if !isBackground(pixel(img, 0, 47)) {
+		t.Fatal("rounded bar should leave bottom-left corner unchanged")
 	}
 
-	const minBadgePixels = 80
 	count := 0
-	for y := 24; y < b.Dy(); y++ {
-		for x := 24; x < b.Dx(); x++ {
+	for y := 0; y < b.Dy(); y++ {
+		for x := 0; x < b.Dx(); x++ {
 			if !isBackground(pixel(img, x, y)) {
 				count++
 			}
 		}
 	}
-	if count < minBadgePixels {
-		t.Fatalf("badge area too small in bottom-right region: %d pixels", count)
+	fullRect := 48 * presenceBarThickness(48)
+	if count <= 0 || count >= fullRect {
+		t.Fatalf("presence bar changed %d pixels, want rounded bar under %d", count, fullRect)
+	}
+}
+
+func TestPresenceBarAwayIsWhite(t *testing.T) {
+	raw := solidPNG(48, testBackground)
+	badged, err := applyPresenceBadge(raw, slack.PresenceAway)
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := png.Decode(bytes.NewReader(badged))
+	if err != nil {
+		t.Fatal(err)
+	}
+	left := pixel(img, 0, 24)
+	if left.R < 0xF0 || left.G < 0xF0 || left.B < 0xF0 {
+		t.Fatalf("away presence bar should be white, got %#v", left)
 	}
 }
 
@@ -178,7 +195,25 @@ func TestRebuildDisplayAvatarsKeepsRawAvatar(t *testing.T) {
 	if !bytes.Equal(got.data, raw) {
 		t.Fatal("expected menu bar avatar to remain unbadged")
 	}
-	if got.contentSize != 0 {
-		t.Fatalf("content size got %d want 0", got.contentSize)
+	if got.contentSize != 48 {
+		t.Fatalf("content size got %d want 48", got.contentSize)
+	}
+}
+
+func TestRebuildDisplayAvatarsAppliesPresenceBar(t *testing.T) {
+	raw := solidPNG(48, testBackground)
+	a := &app{
+		cfg:            defaultStatusCfg(),
+		rawAvatarCache: map[string][]byte{"u1": raw},
+	}
+
+	a.rebuildDisplayAvatars([]team.MemberTime{{ID: "u1", Presence: slack.PresenceActive}})
+
+	got := a.avatarCache["u1"]
+	if bytes.Equal(got.data, raw) {
+		t.Fatal("expected menu bar avatar to include presence bar")
+	}
+	if got.contentSize != 48 {
+		t.Fatalf("content size got %d want 48", got.contentSize)
 	}
 }

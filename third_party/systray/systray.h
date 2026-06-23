@@ -14,6 +14,7 @@ void setTooltip(char* tooltip);
 
 typedef struct {
   char* text;
+  char* width_text;
   char* image_bytes;
   int image_len;
   int avatar_size;

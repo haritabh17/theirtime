@@ -8,7 +8,10 @@ import (
 	"github.com/getlantern/systray"
 	"github.com/haritabh17/theirtime/internal/config"
 	"github.com/haritabh17/theirtime/internal/team"
+	"github.com/haritabh17/theirtime/internal/timeformat"
 )
+
+const groupSeparator = " | "
 
 func setMenubarContent(cfg *config.Config, members []team.MemberTime, avatars map[string]avatarEntry, at time.Time) {
 	segments := buildMenubarSegmentsAt(cfg, members, avatars, at)
@@ -36,7 +39,7 @@ func buildMenubarSegmentsAt(cfg *config.Config, members []team.MemberTime, avata
 			continue
 		}
 		if len(segments) > 0 {
-			segments = append(segments, systray.StatusSegment{Text: " | "})
+			segments = append(segments, systray.StatusSegment{Text: groupSeparator})
 		}
 		segments = append(segments, groupSegments...)
 	}
@@ -59,7 +62,33 @@ func buildGroupSegments(cfg *config.Config, group team.MemberTimeGroup, avatars 
 		}
 	}
 	if text := team.FormatMemberGroupDisplay(cfg, group, ""); text != "" {
-		segments = append(segments, systray.StatusSegment{Text: text})
+		segments = append(segments, systray.StatusSegment{
+			Text:      text,
+			WidthText: memberGroupWidthText(cfg, group),
+		})
 	}
 	return segments
+}
+
+func memberGroupWidthText(cfg *config.Config, group team.MemberTimeGroup) string {
+	if !config.ShowTime(cfg) || len(group.Members) == 0 {
+		return ""
+	}
+	widest := group
+	widest.Members = append([]team.MemberTime(nil), group.Members...)
+	widest.Members[0].Time = widestTimeText(cfg)
+	return team.FormatMemberGroupDisplay(cfg, widest, "")
+}
+
+func widestTimeText(cfg *config.Config) string {
+	if config.TimePrecision(cfg) == timeformat.PrecisionHours {
+		if cfg != nil && cfg.Format24h {
+			return "23"
+		}
+		return "12 PM"
+	}
+	if cfg != nil && cfg.Format24h {
+		return "23.59"
+	}
+	return "12.59 PM"
 }

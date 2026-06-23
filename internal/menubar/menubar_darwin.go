@@ -9,6 +9,7 @@ import (
 
 	"github.com/getlantern/systray"
 	"github.com/haritabh17/theirtime/internal/config"
+	"github.com/haritabh17/theirtime/internal/slack"
 	"github.com/haritabh17/theirtime/internal/team"
 )
 
@@ -245,14 +246,22 @@ func (a *app) refreshAvatars(members []team.MemberTime) {
 	a.rawAvatarCache = next
 }
 
-func (a *app) rebuildDisplayAvatars(_ []team.MemberTime) {
+func (a *app) rebuildDisplayAvatars(members []team.MemberTime) {
 	if !config.ShowAvatar(a.cfg) {
 		a.avatarCache = nil
 		return
 	}
+	presences := make(map[string]slack.Presence, len(members))
+	for _, m := range members {
+		presences[m.ID] = m.Presence
+	}
 	next := make(map[string]avatarEntry, len(a.rawAvatarCache))
 	for id, raw := range a.rawAvatarCache {
-		next[id] = avatarEntry{data: append([]byte(nil), raw...)}
+		display := displayAvatar(true, raw, presences[id])
+		next[id] = avatarEntry{
+			data:        append([]byte(nil), display...),
+			contentSize: imageSquareSize(raw),
+		}
 	}
 	a.avatarCache = next
 }

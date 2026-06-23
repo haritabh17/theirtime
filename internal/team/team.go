@@ -23,6 +23,7 @@ type MemberTime struct {
 	DisplayName string
 	Time        string
 	AvatarURL   string
+	Presence    slack.Presence
 }
 
 // MemberTimeGroup is a display group of teammates sharing one UTC offset.
@@ -35,11 +36,17 @@ type InfoClient interface {
 	GetUserInfo(userID string) (slack.UserInfo, error)
 }
 
+// PresenceClient fetches Slack user presence when available.
+type PresenceClient interface {
+	GetUserPresence(userID string) (slack.Presence, error)
+}
+
 // ListWithTimes resolves each configured member's current local time.
 func ListWithTimes(client InfoClient, cfg *config.Config, at time.Time) ([]MemberTime, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("not configured")
 	}
+	presenceClient, fetchPresence := client.(PresenceClient)
 	out := make([]MemberTime, 0, len(cfg.Team))
 	for _, m := range cfg.Team {
 		mt := MemberTime{Label: m.Label, ID: m.ID}
@@ -52,6 +59,11 @@ func ListWithTimes(client InfoClient, cfg *config.Config, at time.Time) ([]Membe
 		mt.DisplayName = info.DisplayName
 		mt.TZ = info.TZ
 		mt.AvatarURL = info.AvatarURL
+		if fetchPresence {
+			if presence, err := presenceClient.GetUserPresence(m.ID); err == nil {
+				mt.Presence = presence
+			}
+		}
 		if info.TZ == "" {
 			mt.Time = "—"
 		} else {

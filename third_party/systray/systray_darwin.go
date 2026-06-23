@@ -16,6 +16,7 @@ import (
 // StatusSegment is one inline avatar + text chunk for the menu bar title.
 type StatusSegment struct {
 	Text        string
+	WidthText   string // optional text used only to reserve status item width
 	Image       []byte
 	AvatarSize  int // side length of avatar square before badge padding; 0 = scale entire image
 	DisplaySize int // icon display height in points; 0 = platform default
@@ -37,9 +38,15 @@ func SetStatusSegments(segments []StatusSegment) {
 
 	csegs := unsafe.Slice((*C.status_segment_t)(base), n)
 	textPtrs := make([]unsafe.Pointer, n)
+	widthTextPtrs := make([]unsafe.Pointer, n)
 	imgPtrs := make([]unsafe.Pointer, n)
 	defer func() {
 		for _, p := range textPtrs {
+			if p != nil {
+				C.free(p)
+			}
+		}
+		for _, p := range widthTextPtrs {
 			if p != nil {
 				C.free(p)
 			}
@@ -56,6 +63,11 @@ func SetStatusSegments(segments []StatusSegment) {
 			p := C.CString(s.Text)
 			textPtrs[i] = unsafe.Pointer(p)
 			csegs[i].text = p
+		}
+		if s.WidthText != "" {
+			p := C.CString(s.WidthText)
+			widthTextPtrs[i] = unsafe.Pointer(p)
+			csegs[i].width_text = p
 		}
 		if len(s.Image) > 0 {
 			p := C.CBytes(s.Image)
